@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sug'urta Xizmatlarini Baholash</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* DIZAYN (O'zgarmadi) */
+        :root {
+            --primary-color: #003366;
+            --accent-color: #D4AF37;
+            --bg-color: #f4f7f6;
+            --container-bg: #ffffff;
+            --text-color: #333333;
+            --input-border: #dddddd;
+            --input-bg: #ffffff;
+            --option-bg: #f9f9f9;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #66b2ff;
+            --accent-color: #D4AF37;
+            --bg-color: #121212;
+            --container-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --input-border: #444444;
+            --input-bg: #2d2d2d;
+            --option-bg: #2d2d2d;
+        }
+
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-color); margin: 0; padding: 20px; color: var(--text-color); transition: 0.3s; }
+        .container { max-width: 750px; background: var(--container-bg); padding: 40px; margin: 0 auto; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); border-top: 5px solid var(--accent-color); }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--input-border); padding-bottom: 10px; }
+        .lang-switch button { background: none; border: 1px solid var(--input-border); color: var(--text-color); padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left:5px;}
+        .lang-switch button.active { background: var(--accent-color); color: #000; }
+        .theme-toggle { cursor: pointer; font-size: 20px; background: none; border: none; color: var(--text-color); }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header img { max-width: 250px; margin-bottom: 10px; }
+        h1 { color: var(--primary-color); font-size: 24px; margin-bottom: 10px; }
+        
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-weight: bold; margin-bottom: 8px; color: var(--primary-color); }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--input-border); border-radius: 6px; background: var(--input-bg); color: var(--text-color); }
+        .radio-group, .checkbox-group { background: var(--option-bg); padding: 15px; border-radius: 6px; border: 1px solid var(--input-border); }
+        .option-item { display: flex; align-items: start; margin-bottom: 10px; }
+        .option-item input { margin-right: 10px; width: 18px; height: 18px; margin-top: 3px; cursor: pointer; }
+        .option-item label { margin-bottom: 0; cursor: pointer; line-height: 1.4; font-weight: normal; color: var(--text-color); }
+
+        .module-section { border: 1px dashed var(--accent-color); border-radius: 8px; padding: 20px; margin-top: 30px; display: none; background: rgba(212, 175, 55, 0.05); }
+        .module-section.active { display: block; animation: fadeIn 0.5s; }
+        .module-title { color: var(--primary-color); border-bottom: 1px solid var(--input-border); padding-bottom: 10px; margin-bottom: 20px; font-size: 1.2em; text-transform: uppercase; }
+        
+        .rating-scale { display: flex; justify-content: space-between; max-width: 350px; margin: 10px 0; }
+        .rating-item { text-align: center; }
+        .rating-item div { font-size: 0.8em; margin-top: 5px; opacity: 0.8; }
+
+        button.submit-btn { width: 100%; background: var(--primary-color); color: white; padding: 15px; font-size: 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 20px; }
+        button.submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+        
+        .loading, .success-message, .error-message { display: none; text-align: center; margin-top: 20px; padding: 15px; border-radius: 8px; }
+        .loading { color: var(--primary-color); font-weight: bold; }
+        .success-message { color: green; background: rgba(0, 128, 0, 0.1); border: 1px solid green; }
+        .error-message { color: red; background: rgba(255, 0, 0, 0.1); border: 1px solid red; }
+        
+        #dashboard { display: none; margin-top: 40px; border-top: 2px dashed #ccc; padding-top: 30px; }
+        .chart-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 20px; }
+        .stats-card { background: var(--option-bg); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--input-border); }
+        .stat-number { font-size: 2.5em; font-weight: bold; color: var(--primary-color); }
+        .dashboard-footer { margin-top: 30px; text-align: center; font-size: 0.9em; color: #777; font-style: italic; border-top: 1px solid var(--input-border); padding-top: 15px; } 
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @media (min-width: 600px) { .chart-grid { grid-template-columns: 1fr 1fr; } }
+        .retry-btn { margin-top:15px; padding:10px 20px; background: var(--accent-color); color:#000; border:none; border-radius:4px; font-weight:bold; cursor:pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="top-bar">
+        <button class="theme-toggle" id="themeToggle" title="Tun/Kun">☀️</button>
+        <div class="lang-switch">
+            <button onclick="setLanguage('uz')" id="btn-uz" class="active">O'Z</button>
+            <button onclick="setLanguage('ru')" id="btn-ru">РУ</button>
+            <button onclick="setLanguage('en')" id="btn-en">EN</button>
+        </div>
+    </div>
+
+    <div class="header">
+        <img src="https://raw.githubusercontent.com/sunattagayev-cloud/Sug-urta-tashkilotlari-mijozlari-uchun-so-rovnoma/refs/heads/main/Logo_03.svg" alt="Logo">
+        <h1 data-key="title">Sug'urta xizmatlarini baholash</h1>
+        <p class="intro" data-key="intro">Sizning fikringiz bizning rivojlanishimiz uchun muhim.</p>
+    </div>
+
+    <form id="insuranceForm">
+        <input type="hidden" name="IP" id="userIP">
+
+        <!-- I. KIRISH VA PROFIL -->
+        <h3 style="color: var(--text-color); border-bottom: 1px solid var(--input-border); padding-bottom: 5px;" data-key="sec_general">I. KIRISH VA PROFIL</h3>
+
+        <div class="form-group">
+            <label data-key="lbl_client_type">1.1. Siz sug'urta xizmatidan kim sifatida foydalanasiz?</label>
+            <div class="radio-group" id="clientTypeFilter">
+                <div class="option-item"><input type="radio" name="Mijoz_Tipi" value="Jismoniy shaxs" required onchange="toggleAgeField()"><label data-key="opt_person">Jismoniy shaxs (O'z nomimdan)</label></div>
+                <div class="option-item"><input type="radio" name="Mijoz_Tipi" value="Yuridik shaxs" onchange="toggleAgeField()"><label data-key="opt_legal">Yuridik shaxs (Korxona nomidan)</label></div>
+            </div>
+        </div>
+
+        <div class="form-group" id="ageField" style="display:none;">
+            <label data-key="lbl_age">1.2. Yoshingiz?</label>
+            <div class="radio-group">
+                <div class="option-item"><input type="radio" name="Yosh" value="18-25"><label>18-25</label></div>
+                <div class="option-item"><input type="radio" name="Yosh" value="26-35"><label>26-35</label></div>
+                <div class="option-item"><input type="radio" name="Yosh" value="36-50"><label>36-50</label></div>
+                <div class="option-item"><input type="radio" name="Yosh" value="50+"><label>50+</label></div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label data-key="lbl_region">1.3. Asosiy hududingiz</label>
+            <select name="Hudud" required id="regionSelect" style="margin-bottom: 10px;"><option value="" data-key="sel_region">Yuklanmoqda...</option></select>
+            <select name="Tuman" required id="districtSelect"><option value="" data-key="sel_district">Avval hududni tanlang</option></select>
+        </div>
+
+        <div class="form-group">
+            <label data-key="lbl_gender">1.4. Jinsingiz</label>
+            <div class="radio-group" style="display: flex; gap: 20px;">
+                <div class="option-item"><input type="radio" name="Jinsi" value="Erkak" required><label data-key="gender_male">Erkak</label></div>
+                <div class="option-item"><input type="radio" name="Jinsi" value="Ayol"><label data-key="gender_female">Ayol</label></div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label data-key="lbl_company">1.5. Qaysi sug'urta kompaniyasining mijozi hisoblanasiz?</label>
+            <select name="Kompaniya" id="companySelect" required>
+                <option value="" data-key="sel_company">Kompaniyani tanlang...</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label data-key="lbl_contact">Bog'lanish uchun (Ixtiyoriy)</label>
+            <span class="sub-text" data-key="contact_hint">Muammolarni yechishda aloqa qilish imkoni bo'lishi uchun.</span>
+            <input type="text" name="Telefon" placeholder="+998 90 123 45 67" style="margin-bottom: 10px;" data-ph="ph_phone">
+            <input type="email" name="Email" placeholder="email@domain.com" data-ph="ph_email">
+        </div>
+
+        <div class="form-group">
+            <label data-key="lbl_source">1.6. Sug'urta kompaniyasi haqida qayerdan xabar topdingiz?</label>
+            <select name="Manba" required>
+                <option value="" data-key="sel_default">-- Tanlang --</option>
+                <option value="Tanishlar" data-key="src_friends">Tanishlar</option>
+                <option value="Reklama" data-key="src_ads">Reklama</option>
+                <option value="Telegram">Telegram</option>
+                <option value="Instagram">Instagram</option>
+                <option value="Facebook">Facebook</option>
+                <option value="Youtube">Youtube</option>
+                <option value="Google/Yandex">Google/Yandex</option>
+                <option value="2GIS / Maps" data-key="src_map">2GIS / Maps</option>
+                <option value="Eski mijoz" data-key="src_client">Eski mijoz</option>
+                <option value="Tasodifan" data-key="src_random">Tasodifan</option>
+                <option value="Boshqa" data-key="src_other">Boshqa</option>
+            </select>
+        </div>
+
+        <!-- II. FILTRLASH -->
+        <h3 style="color: var(--text-color); border-bottom: 1px solid var(--input-border); padding-bottom: 5px; margin-top: 30px;" data-key="sec_filter">II. FILTRLASH</h3>
+
+        <div class="form-group">
+            <label data-key="lbl_services">2.1. Qaysi xizmatlardan foydalandingiz?</label>
+            <div class="checkbox-group">
+                <div class="option-item"><input type="checkbox" name="Xizmatlar" value="Avto" onchange="toggleModules()"><label data-key="srv_avto">Avtosug'urta (Majburiy/KASKO)</label></div>
+                <div class="option-item"><input type="checkbox" name="Xizmatlar" value="Sogliq" onchange="toggleModules()"><label data-key="srv_health">Sog'liqni sug'urtalash (DMS)</label></div>
+                <div class="option-item"><input type="checkbox" name="Xizmatlar" value="Sayohat" onchange="toggleModules()"><label data-key="srv_travel">Sayohat sug'urtasi</label></div>
+                <div class="option-item"><input type="checkbox" name="Xizmatlar" value="Mulk" onchange="toggleModules()"><label data-key="srv_property">Mulk sug'urtasi</label></div>
+                <div class="option-item"><input type="checkbox" name="Xizmatlar" value="Boshqa" onchange="toggleModules()"><label data-key="srv_other">Boshqa</label></div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label data-key="lbl_claim_check">2.2. Sug'urta muddati davomida sug'urta hodisasi yuz berdimi?</label>
+            <div class="radio-group" style="background: rgba(255, 0, 0, 0.05); border: 1px solid #ffcccc;">
+                <div class="option-item"><input type="radio" name="Hodisa" value="Ha" required onchange="toggleModules()"><label data-key="opt_yes_claim">🔴 Ha (To'lov olishga murojaat qilganman)</label></div>
+                <div class="option-item"><input type="radio" name="Hodisa" value="Yo'q" onchange="toggleModules()"><label data-key="opt_no_claim">⚪ Yo'q (Faqat servisni baholayman)</label></div>
+            </div>
+        </div>
+
+        <!-- MODULES -->
+        
+        <!-- A: AUTO -->
+        <div id="module_avto" class="module-section">
+            <h3 class="module-title" data-key="mod_a_title">🚗 A-MODUL: Avtosug'urta</h3>
+            <div class="form-group"><label data-key="a1_q">A1. Sug’urta turi:</label><div class="radio-group"><div class="option-item"><input type="radio" name="A_Tur" value="Majburiy"><label data-key="a1_opt1">Majburiy</label></div><div class="option-item"><input type="radio" name="A_Tur" value="Ixtiyoriy"><label data-key="a1_opt2">Ixtiyoriy</label></div></div></div>
+            <div class="form-group"><label data-key="a2_q">A2. Rasmiylashtirish jarayoni:</label><div class="radio-group"><div class="option-item"><input type="radio" name="A_Rasmiylashtirish" value="Onlayn"><label data-key="a2_opt1">Onlayn oldim, juda tez</label></div><div class="option-item"><input type="radio" name="A_Rasmiylashtirish" value="Agent"><label data-key="a2_opt2">Agent kelib rasmiylashtirdi</label></div><div class="option-item"><input type="radio" name="A_Rasmiylashtirish" value="Ofis"><label data-key="a2_opt3">Ofisga borishga majbur bo'ldim</label></div></div></div>
+            <div class="form-group"><label data-key="a3_q">A3. Narxlar shaffofligi:</label><div class="radio-group"><div class="option-item"><input type="radio" name="A_Narx" value="Tushunarli"><label data-key="a3_opt1">Tushunarli va o'rtacha</label></div><div class="option-item"><input type="radio" name="A_Narx" value="Majburiy xizmat"><label data-key="a3_opt2">Qo'shimcha xizmatlar majburlab qo'shildi</label></div><div class="option-item"><input type="radio" name="A_Narx" value="Qimmat"><label data-key="a3_opt3">Qimmat</label></div></div></div>
+            <div class="form-group"><label data-key="rating_a">AVTOSUG'URTA BAHOSI (1-5):</label><div class="rating-scale"><label class="rating-item"><input type="radio" name="A_Baho" value="1"><div>1</div></label><label class="rating-item"><input type="radio" name="A_Baho" value="2"><div>2</div></label><label class="rating-item"><input type="radio" name="A_Baho" value="3"><div>3</div></label><label class="rating-item"><input type="radio" name="A_Baho" value="4"><div>4</div></label><label class="rating-item"><input type="radio" name="A_Baho" value="5"><div>5</div></label></div></div>
+        </div>
+
+        <!-- B: HEALTH -->
+        <div id="module_health" class="module-section">
+            <h3 class="module-title" data-key="mod_b_title">🏥 B-MODUL: Sog'liqni sug'urtalash</h3>
+            <div class="form-group"><label data-key="b1_q">B1. Klinikalar tarmog'i yetarlimi?</label><div class="radio-group"><div class="option-item"><input type="radio" name="B_Tarmoq" value="Ha"><label data-key="b1_opt1">Ha, tanlov katta</label></div><div class="option-item"><input type="radio" name="B_Tarmoq" value="Yo'q"><label data-key="b1_opt2">Yo'q, faqat markazda</label></div></div></div>
+            <div class="form-group"><label data-key="b2_q">B2. Tasdiqlash tezligi:</label><div class="radio-group"><div class="option-item"><input type="radio" name="B_Tezlik" value="Tez"><label data-key="b2_opt1">Tez (Bot/Call-center)</label></div><div class="option-item"><input type="radio" name="B_Tezlik" value="Uzoq"><label data-key="b2_opt2">Uzoq kutdim, qiyin</label></div></div></div>
+            <div class="form-group"><label data-key="rating_b">TIBBIY SUG'URTA BAHOSI (1-5):</label><div class="rating-scale"><label class="rating-item"><input type="radio" name="B_Baho" value="1"><div>1</div></label><label class="rating-item"><input type="radio" name="B_Baho" value="2"><div>2</div></label><label class="rating-item"><input type="radio" name="B_Baho" value="3"><div>3</div></label><label class="rating-item"><input type="radio" name="B_Baho" value="4"><div>4</div></label><label class="rating-item"><input type="radio" name="B_Baho" value="5"><div>5</div></label></div></div>
+        </div>
+
+        <!-- C: TRAVEL / PROPERTY / OTHER -->
+        <div id="module_travel" class="module-section">
+            <h3 class="module-title" data-key="mod_c_title">✈️🏠 C-MODUL: Boshqa sug'urta xizmatlari</h3>
+            <div class="form-group"><label data-key="c1_q">C1. Xarid qilish qulayligi:</label><div class="radio-group"><div class="option-item"><input type="radio" name="C_Qulaylik" value="Agent"><label data-key="c1_opt1">Agent ofisga/uyga kelib rasmiylashtirdi</label></div><div class="option-item"><input type="radio" name="C_Qulaylik" value="Onlayn"><label data-key="c1_opt2">Onlayn oldim (E-Polis)</label></div><div class="option-item"><input type="radio" name="C_Qulaylik" value="Ofis"><label data-key="c1_opt3">Ofis qidirib yurdim</label></div></div></div>
+            <div class="form-group"><label data-key="c2_q">C2. Assistans xizmati (Agarda sayohat bo'lsa):</label><div class="radio-group"><div class="option-item"><input type="radio" name="C_Assistans" value="Ha"><label data-key="c2_opt1">Ha, tushuntirildi</label></div><div class="option-item"><input type="radio" name="C_Assistans" value="Yo'q"><label data-key="c2_opt2">Yo'q</label></div></div></div>
+            <div class="form-group"><label data-key="rating_c">XIZMAT SIFATI BAHOSI (1-5):</label><div class="rating-scale"><label class="rating-item"><input type="radio" name="C_Baho" value="1"><div>1</div></label><label class="rating-item"><input type="radio" name="C_Baho" value="2"><div>2</div></label><label class="rating-item"><input type="radio" name="C_Baho" value="3"><div>3</div></label><label class="rating-item"><input type="radio" name="C_Baho" value="4"><div>4</div></label><label class="rating-item"><input type="radio" name="C_Baho" value="5"><div>5</div></label></div></div>
+        </div>
+
+        <!-- D: CLAIM (ENG MUHIMI - faqat Hodisa=Ha bo'lsa) -->
+        <div id="module_claim" class="module-section" style="border-color: red; background: rgba(255,0,0,0.02);">
+            <h3 class="module-title" data-key="mod_d_title" style="color: red;">⚠️ D-MODUL: To'lovlar va Zararni qoplash</h3>
+            <div class="form-group"><label data-key="d1_q">D1. Xodimlarning reaksiyasi:</label><div class="radio-group"><div class="option-item"><input type="radio" name="D_Reaksiya" value="Yaxshi"><label data-key="d1_opt1">Tezda yordam berishdi</label></div><div class="option-item"><input type="radio" name="D_Reaksiya" value="Qiyin"><label data-key="d1_opt2">Bog'lanish qiyin bo'ldi</label></div><div class="option-item"><input type="radio" name="D_Reaksiya" value="Yomon"><label data-key="d1_opt3">Qo'pol muomala qilishdi</label></div></div></div>
+            <div class="form-group"><label data-key="d2_q">D2. Zararni baholash:</label><div class="radio-group"><div class="option-item"><input type="radio" name="D_Baholash" value="Haqiqiy"><label data-key="d2_opt1">Haqiqiy bozor narxida</label></div><div class="option-item"><input type="radio" name="D_Baholash" value="Kamaytirilgan"><label data-key="d2_opt2">Kamaytirib ko'rsatildi</label></div><div class="option-item"><input type="radio" name="D_Baholash" value="Cho'zilgan"><label data-key="d2_opt3">Juda cho'zilib ketdi</label></div></div></div>
+            <div class="form-group"><label data-key="d3_q">D3. To'lab berish muddati:</label><div class="radio-group"><div class="option-item"><input type="radio" name="D_Muddat" value="Vaqtida"><label data-key="d3_opt1">Va'da qilingan vaqtda</label></div><div class="option-item"><input type="radio" name="D_Muddat" value="Kechikib"><label data-key="d3_opt2">Kechikib to'landi</label></div><div class="option-item"><input type="radio" name="D_Muddat" value="Rad etildi"><label data-key="d3_opt3">To'lashdan bosh tortishdi</label></div></div></div>
+            <div class="form-group"><label data-key="rating_d">TO'LOV JARAYONI BAHOSI (1-5):</label><div class="rating-scale"><label class="rating-item"><input type="radio" name="D_Baho" value="1"><div>1</div></label><label class="rating-item"><input type="radio" name="D_Baho" value="2"><div>2</div></label><label class="rating-item"><input type="radio" name="D_Baho" value="3"><div>3</div></label><label class="rating-item"><input type="radio" name="D_Baho" value="4"><div>4</div></label><label class="rating-item"><input type="radio" name="D_Baho" value="5"><div>5</div></label></div></div>
+        </div>
+
+        <!-- E: DIGITAL (Doimiy) -->
+        <div id="module_digital" class="module-section" style="display: block;">
+            <h3 class="module-title" data-key="mod_e_title">📱 E-MODUL: Raqamli Xizmatlar</h3>
+            <div class="form-group"><label data-key="e1_q">E1. E-Polis sotib olish imkoniyati:</label><div class="radio-group"><div class="option-item"><input type="radio" name="E_Epolis" value="Qulay"><label data-key="e1_opt1">Sayt/Ilova qulay</label></div><div class="option-item"><input type="radio" name="E_Epolis" value="Xatolik"><label data-key="e1_opt2">Xatoliklar ko'p</label></div></div></div>
+            <div class="form-group"><label data-key="e2_q">E2. Onlayn qo'llab-quvvatlash:</label><div class="radio-group"><div class="option-item"><input type="radio" name="E_Support" value="Yaxshi"><label data-key="e2_opt1">Operatorlar malakali</label></div><div class="option-item"><input type="radio" name="E_Support" value="Yomon"><label data-key="e2_opt2">Javob olish qiyin</label></div></div></div>
+            <div class="form-group"><label data-key="rating_e">IT XIZMATLAR BAHOSI (1-5):</label><div class="rating-scale"><label class="rating-item"><input type="radio" name="E_Baho" value="1"><div>1</div></label><label class="rating-item"><input type="radio" name="E_Baho" value="2"><div>2</div></label><label class="rating-item"><input type="radio" name="E_Baho" value="3"><div>3</div></label><label class="rating-item"><input type="radio" name="E_Baho" value="4"><div>4</div></label><label class="rating-item"><input type="radio" name="E_Baho" value="5"><div>5</div></label></div></div>
+        </div>
+
+        <button type="submit" id="submitBtn" class="submit-btn" data-key="btn_submit">Yuborish</button>
+        <div class="loading" id="loading" data-key="msg_sending">Yuborilmoqda, kuting...</div>
+        <div class="error-message" id="errorMessage" data-key="msg_error">Xatolik! Internetni tekshiring.</div>
+    </form>
+    
+    <div class="success-message" id="successMessage">
+        <h2 data-key="msg_thanks">Rahmat!</h2>
+        <p data-key="msg_saved">Javobingiz qabul qilindi.</p>
+        
+        <div id="dashboard">
+            <h3 data-key="dash_title" style="text-align:center; color:var(--primary-color);">📊 Umumiy Statistika (Live)</h3>
+            <div class="chart-grid">
+                <div class="stats-card">
+                    <div class="stat-number" id="totalCount">...</div>
+                    <div style="font-size:0.9em; opacity:0.8;" data-key="dash_total">Jami ishtirokchilar</div>
+                </div>
+                <div class="stats-card">
+                    <div class="stat-number" id="claimCount">...</div>
+                    <div style="font-size:0.9em; opacity:0.8;" data-key="dash_claims">To'lovga murojaat qilganlar</div>
+                </div>
+            </div>
+            <div class="dashboard-footer" data-key="msg_footer">To'liq tahlil har oy yakunida e'lon qilinadi.</div>
+        </div>
+
+        <button onclick="location.reload()" class="retry-btn" data-key="btn_again" style="margin-top: 30px;">Yana yuborish</button>
+    </div>
+</div>
+
+<script>
+    // URL
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbyh7lc11R46gFoXlG5mIy324f8EHvS5Y7ioq1xHeBLIHa2cVXKhZuuGFi9I5_iYAlhV/exec';
+    
+    // JSON Hududlar
+    const regionsJsonUrl = "https://raw.githubusercontent.com/sunattagayev-cloud/Sug-urta-tashkilotlari-mijozlari-uchun-so-rovnoma/refs/heads/main/hududlar_va_tumanlar.json";
+    
+    // Sug'urta ro'yxati (Alifbo tartibida)
+    const insuranceList = [
+        "ALFA INVEST SUG`URTA KOMPANIYASI",
+        "ALFA LIFE INSURANCE",
+        "ALSKOM SUG`URTA KOMPANIYASI",
+        "APEX INSURANCE",
+        "APEX LIFE INSURANCE",
+        "ARIA SUG`URTA TASHKILOTI",
+        "ASIA INSURANCE SUG`URTA KOMPANIYASI",
+        "EUROASIA INSURANCE",
+        "GLOBAL INSURANCE GROUP",
+        "GROSS SUG`URTA KOMPANIYASI",
+        "HAMKOR SUG`URTA",
+        "IMKON-SUG`URTA",
+        "IMPEX-INSURANCE",
+        "INFINITY INSURANCE",
+        "INGO-UZBEKISTON SUG`URTA",
+        "INSON",
+        "ISHONCH SUG`URTA KOMPANIYASI",
+        "KAFIL-SUG`URTA",
+        "KAFOLAT HAYOT INSURANCE",
+        "KAFOLAT SUG`URTA KOMPANIYASI",
+        "KAPITAL SUG`URTA",
+        "MOSAIC INSURANCE GROUP",
+        "MY-INSURANCE",
+        "NEO INSURANCE CORP",
+        "O`ZAGROSUG`URTA",
+        "O`ZBEKINVEST",
+        "O`ZBEKINVEST HAYOT SUG`URTA KOMPANIYASI",
+        "SEMURG INSURANCE",
+        "SQB INSURANCE SUG`URTA KOMPANIYASI",
+        "TBC SUG'URTA",
+        "TEMIRYO`L SUG`URTA",
+        "TRUST-INSURANCE",
+        "XALQ SUG`URTA"
+    ];
+
+    let currentLang = 'uz';
+    const adminIP = "94.158.58.35";
+    let currentUserIP = "";
+    let regionsData = [];
+
+    const translations = {
+        uz: {
+            title: "Sug'urta xizmatlarini baholash", intro: "Xizmat sifatini yaxshilashda o'z hissangizni qo'shing.",
+            sec_general: "I. KIRISH VA PROFIL",
+            lbl_client_type: "1.1. Siz sug'urta xizmatidan kim sifatida foydalanasiz?", opt_person: "Jismoniy shaxs", opt_legal: "Yuridik shaxs (Korxona)",
+            lbl_company: "1.5. Qaysi sug'urta kompaniyasining mijozi hisoblanasiz?", sel_company: "Kompaniyani tanlang...",
+            lbl_contact: "Aloqa ma'lumotlari (Ixtiyoriy)", contact_hint: "Muammolarni yechishda aloqa qilish imkoni bo'lishi uchun.", ph_phone: "Telefon raqam", ph_email: "Email manzil (agar bor bo'lsa)",
+            lbl_age: "1.2. Yoshingiz?", lbl_gender: "1.4. Jinsingiz", gender_male: "Erkak", gender_female: "Ayol",
+            lbl_region: "1.3. Hudud va Tuman",  sel_region: "Yuklanmoqda...", sel_district: "Avval hududni tanlang...",
+            lbl_source: "1.6. Sug'urta kompaniyasi haqida qayerdan xabar topdingiz?", sel_default: "-- Tanlang --",
+            src_friends: "Tanishlar", src_ads: "Reklama", src_map: "2GIS / Maps", src_client: "Eski mijoz", src_random: "Tasodifan", src_other: "Boshqa",
+
+            sec_filter: "II. FILTRLASH",
+            lbl_services: "2.1. Qaysi xizmatlardan foydalandingiz?",
+            srv_avto: "Avtosug'urta (Majburiy/KASKO)", srv_health: "Sog'liqni sug'urtalash (DMS)", srv_travel: "Sayohat sug'urtasi", srv_property: "Mulk sug'urtasi", srv_other: "Boshqa",
+            lbl_claim_check: "2.2. Sug'urta muddati davomida sug'urta hodisasi yuz berdimi?",
+            opt_yes_claim: "🔴 Ha (To'lov olishga murojaat qilganman)", opt_no_claim: "⚪ Yo'q (Faqat servisni baholayman)",
+            
+            // Modules
+            mod_a_title: "🚗 A-MODUL: Avtosug'urta", a1_q: "A1. Sug’urta turi:", a1_opt1: "Majburiy", a1_opt2: "Ixtiyoriy",
+            a2_q: "A2. Rasmiylashtirish:", a2_opt1: "Onlayn (juda tez)", a2_opt2: "Agent orqali", a2_opt3: "Ofisga borganman",
+            a3_q: "A3. Narxlar:", a3_opt1: "Tushunarli", a3_opt2: "Majburiy xizmat qo'shildi", a3_opt3: "Qimmat",
+            rating_a: "AVTOSUG'URTA BAHOSI (1-5):",
+
+            mod_b_title: "🏥 B-MODUL: Tibbiy sug'urta", b1_q: "B1. Klinikalar yetarlimi?", b1_opt1: "Ha, ko'p", b1_opt2: "Yo'q, kam",
+            b2_q: "B2. Tasdiqlash tezligi:", b2_opt1: "Tez", b2_opt2: "Uzoq",
+            rating_b: "TIBBIY SUG'URTA BAHOSI (1-5):",
+
+            mod_c_title: "✈️🏠 C-MODUL: Boshqa sug'urta xizmatlari", c1_q: "C1. Xarid qilish qulayligi:", c1_opt1: "Agent ofisga/uyga kelib rasmiylashtirdi", c1_opt2: "Onlayn oldim (E-Polis)", c1_opt3: "Ofis qidirib yurdim",
+            c2_q: "C2. Assistans xizmati (Agarda sayohat bo'lsa):", c2_opt1: "Ha, tushuntirildi", c2_opt2: "Yo'q",
+            rating_c: "XIZMAT SIFATI BAHOSI (1-5):",
+
+            mod_d_title: "⚠️ D-MODUL: To'lovlar va Zararni qoplash", d1_q: "D1. Xodimlarning reaksiyasi:", d1_opt1: "Tez yordam berishdi", d1_opt2: "Bog'lanish qiyin", d1_opt3: "Qo'pol",
+            d2_q: "D2. Zararni baholash:", d2_opt1: "Haqiqiy narxda", d2_opt2: "Kamaytirib ko'rsatildi", d2_opt3: "Cho'zilib ketdi",
+            d3_q: "D3. To'lov muddati:", d3_opt1: "Vaqtida", d3_opt2: "Kechikib", d3_opt3: "Rad etildi",
+            rating_d: "TO'LOV JARAYONI BAHOSI (1-5):",
+
+            mod_e_title: "📱 E-MODUL: Raqamli Xizmatlar", e1_q: "E1. E-Polis tizimi:", e1_opt1: "Qulay", e1_opt2: "Xatolik ko'p",
+            e2_q: "E2. Online Support:", e2_opt1: "Yaxshi", e2_opt2: "Yomon",
+            rating_e: "IT XIZMATLAR BAHOSI (1-5):",
+
+            btn_submit: "Yuborish", msg_sending: "Yuborilmoqda...", msg_error: "Xatolik!", msg_thanks: "Rahmat!", msg_saved: "Javob qabul qilindi.", btn_again: "Yana yuborish",
+            alert_limit: "Siz bugun ushbu kompaniyaga ovoz bergansiz!", alert_service: "Kamida bitta xizmatni tanlang!",
+            dash_title: "📊 Statistika", dash_total: "Jami", dash_claims: "To'lovga murojaat qilganlar", msg_footer: "Tahlil oy oxirida e'lon qilinadi."
+        },
+        ru: {
+            title: "Оценка страховых услуг", intro: "Пожалуйста, оцените качество услуг компаний.",
+            sec_general: "I. ПРОФИЛЬ",
+            lbl_client_type: "1.1. Ваш статус:", opt_person: "Физ. лицо", opt_legal: "Юр. лицо",
+            lbl_company: "1.5. Ваша страховая компания?", sel_company: "Выберите компанию...",
+            lbl_contact: "Контакты (Необязательно)", contact_hint: "Чтобы мы могли помочь в решении проблем.", ph_phone: "Номер телефона", ph_email: "Email (если есть)",
+            lbl_age: "1.2. Ваш возраст", lbl_gender: "1.4. Ваш пол", gender_male: "Мужской", gender_female: "Женский",
+            lbl_region: "1.3. Регион", sel_region: "Загрузка...", sel_district: "Выберите район",
+            lbl_source: "1.6. Откуда узнали?", sel_default: "-- Выберите --", src_friends: "Знакомые", src_ads: "Реклама", src_map: "Карты", src_client: "Клиент", src_random: "Случайно", src_other: "Другое",
+
+            sec_filter: "II. ФИЛЬТР",
+            lbl_services: "2.1. Какими услугами пользовались?",
+            srv_avto: "Автострахование", srv_health: "Медицинское (ДМС)", srv_travel: "Путешествия", srv_property: "Имущество", srv_other: "Другое",
+            lbl_claim_check: "2.2. Был ли страховой случай?",
+            opt_yes_claim: "🔴 Да (Обращался за выплатой)", opt_no_claim: "⚪ Нет (Оцениваю только сервис)",
+            
+            mod_a_title: "🚗 Модуль A: Автострахование", a1_q: "A1. Тип:", a1_opt1: "Обязательное", a1_opt2: "Добровольное",
+            a2_q: "A2. Оформление:", a2_opt1: "Онлайн", a2_opt2: "Агент", a2_opt3: "Офис",
+            a3_q: "A3. Цены:", a3_opt1: "Понятные", a3_opt2: "Навязали услуги", a3_opt3: "Дорого",
+            rating_a: "ОЦЕНКА АВТО (1-5):",
+
+            mod_b_title: "🏥 Модуль B: Медицина", b1_q: "B1. Сеть клиник?", b1_opt1: "Широкая", b1_opt2: "Мало",
+            b2_q: "B2. Скорость подтверждения:", b2_opt1: "Быстро", b2_opt2: "Долго",
+            rating_b: "ОЦЕНКА МЕД (1-5):",
+
+            mod_c_title: "✈️🏠 Модуль C: Другие виды страхования", c1_q: "C1. Покупка:", c1_opt1: "Агент оформил на месте", c1_opt2: "Онлайн", c1_opt3: "Искал офис",
+            c2_q: "C2. Ассистанс (для путешествий)?", c2_opt1: "Да, объяснили", c2_opt2: "Нет",
+            rating_c: "ОЦЕНКА (1-5):",
+
+            mod_d_title: "⚠️ Модуль D: Выплаты (Урегулирование)", d1_q: "D1. Реакция сотрудников:", d1_opt1: "Помогли быстро", d1_opt2: "Сложно связаться", d1_opt3: "Грубо",
+            d2_q: "D2. Оценка ущерба:", d2_opt1: "Рыночная", d2_opt2: "Заниженная", d2_opt3: "Затянуто",
+            d3_q: "D3. Сроки выплаты:", d3_opt1: "Вовремя", d3_opt2: "С задержкой", d3_opt3: "Отказ",
+            rating_d: "ОЦЕНКА ВЫПЛАТ (1-5):",
+
+            mod_e_title: "📱 Модуль E: Цифровые услуги", e1_q: "E1. Е-Полис:", e1_opt1: "Удобно", e1_opt2: "Ошибки",
+            e2_q: "E2. Поддержка:", e2_opt1: "Хорошо", e2_opt2: "Плохо",
+            rating_e: "IT ОЦЕНКА (1-5):",
+
+            btn_submit: "Отправить", msg_sending: "Отправка...", msg_error: "Ошибка!", msg_thanks: "Спасибо!", msg_saved: "Принято.", btn_again: "Еще раз",
+            alert_limit: "Вы уже голосовали за эту компанию!", alert_service: "Выберите хотя бы одну услугу!", dash_title: "📊 Статистика", dash_total: "Всего", dash_claims: "Обратившиеся за выплатой", msg_footer: "Полный анализ публикуется в конце месяца."
+        },
+        en: {
+            title: "Insurance Evaluation", intro: "Help us improve service.",
+            sec_general: "I. PROFILE",
+            lbl_client_type: "1.1. Client Type:", opt_person: "Individual", opt_legal: "Corporate",
+            lbl_company: "1.5. Insurance Company:", sel_company: "Select...",
+            lbl_contact: "Contact (Optional)", contact_hint: "To help solve your issues.", ph_phone: "Phone number", ph_email: "Email address",
+            lbl_age: "1.2. Age", lbl_gender: "1.4. Gender", gender_male: "Male", gender_female: "Female",
+            lbl_region: "1.3. Region", sel_region: "Loading...", sel_district: "Select District",
+            lbl_source: "1.6. Source?", sel_default: "-- Select --", src_friends: "Friends", src_ads: "Ads", src_map: "Maps", src_client: "Client", src_random: "Random", src_other: "Other",
+
+            sec_filter: "II. FILTER",
+            lbl_services: "2.1. Services used?",
+            srv_avto: "Auto Insurance", srv_health: "Health", srv_travel: "Travel", srv_property: "Property", srv_other: "Other",
+            lbl_claim_check: "2.2. Did any insurance event occur?",
+            opt_yes_claim: "🔴 Yes (Applied for payout)", opt_no_claim: "⚪ No (Rating service only)",
+            
+            mod_a_title: "🚗 Module A: Auto", a1_q: "A1. Type:", a1_opt1: "Mandatory", a1_opt2: "Voluntary",
+            a2_q: "A2. Process:", a2_opt1: "Online", a2_opt2: "Agent", a2_opt3: "Office",
+            a3_q: "A3. Price:", a3_opt1: "Fair", a3_opt2: "Forced addons", a3_opt3: "Expensive",
+            rating_a: "RATING (1-5):",
+
+            mod_b_title: "🏥 Module B: Health", b1_q: "B1. Clinics network?", b1_opt1: "Wide", b1_opt2: "Limited",
+            b2_q: "B2. Approval speed:", b2_opt1: "Fast", b2_opt2: "Slow",
+            rating_b: "RATING (1-5):",
+
+            mod_c_title: "✈️🏠 Module C: Other Services", c1_q: "C1. Purchase:", c1_opt1: "Agent visited", c1_opt2: "Online", c1_opt3: "Office",
+            c2_q: "C2. Assistance info (Travel)?", c2_opt1: "Yes", c2_opt2: "No",
+            rating_c: "RATING (1-5):",
+
+            mod_d_title: "⚠️ Module D: Claims", d1_q: "D1. Staff reaction:", d1_opt1: "Helpful", d1_opt2: "Hard to reach", d1_opt3: "Rude",
+            d2_q: "D2. Assessment:", d2_opt1: "Fair", d2_opt2: "Undervalued", d2_opt3: "Too long",
+            d3_q: "D3. Payout time:", d3_opt1: "On time", d3_opt2: "Delayed", d3_opt3: "Denied",
+            rating_d: "PAYOUT RATING (1-5):",
+
+            mod_e_title: "📱 Module E: Digital", e1_q: "E1. E-Policy:", e1_opt1: "Convenient", e1_opt2: "Errors",
+            e2_q: "E2. Support:", e2_opt1: "Good", e2_opt2: "Bad",
+            rating_e: "IT RATING (1-5):",
+
+            btn_submit: "Submit", msg_sending: "Sending...", msg_error: "Error!", msg_thanks: "Thanks!", msg_saved: "Saved.", btn_again: "Again",
+            alert_limit: "You already voted today!", alert_service: "Select at least one service!", dash_title: "📊 Stats", dash_total: "Total", dash_claims: "Applied for payout", msg_footer: "Full analysis published at month end."
+        }
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+        loadCompanies();
+        setLanguage('uz');
+        
+        fetch('https://api.ipify.org?format=json')
+            .then(r => r.json())
+            .then(d => { 
+                document.getElementById('userIP').value = d.ip; 
+                currentUserIP = d.ip;
+            }).catch(e => console.log(e));
+
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.body.setAttribute('data-theme', savedTheme);
+        document.getElementById('themeToggle').innerText = savedTheme === 'dark' ? '🌙' : '☀️';
+    });
+
+    async function  loadCompanies() {
+        // Hududlarni ham yuklab olamiz
+        try {
+            const res = await fetch(regionsJsonUrl);
+            regionsData = await res.json();
+            populateRegions();
+        } catch (error) { console.error(error); }
+
+        const select = document.getElementById('companySelect');
+        insuranceList.sort().forEach(c => {
+            let opt = document.createElement('option');
+            opt.value = c; opt.innerText = c;
+            select.appendChild(opt);
+        });
+    }
+
+    function populateRegions() {
+        const regionSelect = document.getElementById('regionSelect');
+        const t = translations[currentLang];
+        if(!regionsData || regionsData.length === 0) return;
+        
+        // Save current selection
+        const currentVal = regionSelect.value;
+        regionSelect.innerHTML = `<option value="">${t.sel_region}</option>`;
+        
+        regionsData.forEach((region) => {
+            const opt = document.createElement('option');
+            const langKey = 'name_' + currentLang;
+            const regionName = region[langKey] || region.name_uz;
+            opt.value = region.name_uz; 
+            opt.innerText = regionName;
+            regionSelect.appendChild(opt);
+        });
+        regionSelect.value = currentVal;
+    }
+
+    // Tumanlarni yangilash
+    document.getElementById('regionSelect').addEventListener('change', function() {
+        const selRegion = this.value;
+        const districtSelect = document.getElementById('districtSelect');
+        const t = translations[currentLang];
+        districtSelect.innerHTML = `<option value="">${t.sel_district}</option>`;
+
+        const regionObj = regionsData.find(r => r.name_uz === selRegion);
+        if (regionObj && regionObj.districts) {
+            regionObj.districts.forEach(dist => {
+                 const opt = document.createElement('option');
+                 const langKey = 'name_' + currentLang;
+                 const distName = dist[langKey] || dist.name_uz;
+                 opt.value = dist.name_uz;
+                 opt.innerText = distName;
+                 districtSelect.appendChild(opt);
+            });
+        }
+    });
+
+    function setLanguage(lang) {
+        currentLang = lang;
+        const t = translations[lang];
+        document.querySelectorAll('[data-key]').forEach(el => {
+            const key = el.getAttribute('data-key');
+            if (t[key]) el.innerText = t[key];
+        });
+        document.querySelectorAll('.lang-switch button').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-'+lang).classList.add('active');
+        populateRegions();
+    }
+
+    // --- YOSHNI KO'RSATISH ---
+    window.toggleAgeField = function() {
+        const type = document.querySelector('input[name="Mijoz_Tipi"]:checked')?.value;
+        const ageDiv = document.getElementById('ageField');
+        if (type === 'Jismoniy shaxs') {
+            ageDiv.style.display = 'block';
+            ageDiv.querySelectorAll('input').forEach(i => i.required = true);
+        } else {
+            ageDiv.style.display = 'none';
+            ageDiv.querySelectorAll('input').forEach(i => { i.required = false; i.checked = false; });
+        }
+    }
+
+    // --- MANTIQ (TOGGLE) ---
+    window.toggleModules = function() {
+        // 1. Reset all modules
+        const allMods = ['module_avto', 'module_health', 'module_travel', 'module_claim', 'module_digital'];
+        allMods.forEach(id => {
+            const el = document.getElementById(id);
+            el.classList.remove('active');
+            el.querySelectorAll('input, select').forEach(i => { i.disabled = true; i.required = false; });
+        });
+
+        // 2. Doimiy ochiq modul (E - Digital) - Bu barcha uchun
+        const modE = document.getElementById('module_digital');
+        modE.classList.add('active');
+        modE.querySelectorAll('input').forEach(i => i.disabled = false);
+
+        // 3. Xizmatlar (Checkbox)
+        const services = Array.from(document.querySelectorAll('input[name="Xizmatlar"]:checked')).map(c => c.value);
+        
+        if (services.includes('Avto')) activateMod('module_avto');
+        if (services.includes('Sogliq')) activateMod('module_health');
+        // Sayohat, Mulk yoki Boshqa tanlansa -> C Modul ochiladi
+        if (services.includes('Sayohat') || services.includes('Mulk') || services.includes('Boshqa')) activateMod('module_travel');
+
+        // 4. Hodisa (Claim) - D Modul
+        const claimVal = document.querySelector('input[name="Hodisa"]:checked')?.value;
+        if (claimVal === 'Ha') {
+            activateMod('module_claim');
+        }
+    }
+
+    function activateMod(id) {
+        const el = document.getElementById(id);
+        el.classList.add('active');
+        el.querySelectorAll('input, select').forEach(i => i.disabled = false);
+        // Reyting majburiy
+        const radios = el.querySelectorAll('.rating-scale input[type="radio"]');
+        if(radios.length > 0) radios[0].required = true;
+    }
+
+    // FORMA YUBORISH
+    document.getElementById('insuranceForm').addEventListener('submit', e => {
+        e.preventDefault();
+        const t = translations[currentLang];
+
+        // IP Check
+        const comp = document.getElementById('companySelect').value;
+        if (currentUserIP !== adminIP) {
+            let history = JSON.parse(localStorage.getItem('insHistory')) || {};
+            if (history[comp] === new Date().toDateString()) {
+                alert(t.alert_limit); return;
+            }
+        }
+
+        const svcs = document.querySelectorAll('input[name="Xizmatlar"]:checked');
+        if (svcs.length === 0) { alert(t.alert_service); return; }
+
+        const btn = document.getElementById('submitBtn');
+        const loading = document.getElementById('loading');
+        
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        loading.style.display = 'block';
+
+        const formData = new FormData(e.target);
+        // Checkbox array fix
+        const xizmatArr = [];
+        svcs.forEach(s => xizmatArr.push(s.value));
+        formData.set('Xizmatlar', xizmatArr.join(', '));
+
+        fetch(scriptURL, { method: 'POST', body: formData })
+        .then(res => {
+            if (currentUserIP !== adminIP) {
+                let history = JSON.parse(localStorage.getItem('insHistory')) || {};
+                history[comp] = new Date().toDateString();
+                localStorage.setItem('insHistory', JSON.stringify(history));
+            }
+            loading.style.display = 'none';
+            document.getElementById('insuranceForm').style.display = 'none';
+            document.querySelector('.header').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'block';
+            loadDashboard();
+        })
+        .catch(err => {
+            console.error(err);
+            loading.style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'block';
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        });
+    });
+
+    function loadDashboard() {
+        document.getElementById('dashboard').style.display = 'block';
+        fetch(scriptURL)
+            .then(r => r.json())
+            .then(data => {
+                if(data.total) document.getElementById('totalCount').innerText = data.total;
+                if(data.claimCount !== undefined) document.getElementById('claimCount').innerText = data.claimCount;
+            })
+            .catch(e => console.log(e));
+    }
+
+    document.getElementById('themeToggle').addEventListener('click', () => {
+        const body = document.body;
+        const newTheme = body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        body.setAttribute('data-theme', newTheme);
+        document.getElementById('themeToggle').innerText = newTheme === 'dark' ? '🌙' : '☀️';
+        localStorage.setItem('theme', newTheme);
+    });
+</script>
+
+</body>
+</html>
